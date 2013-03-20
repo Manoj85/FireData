@@ -45,14 +45,7 @@ typedef void (^fcdm_void_managedobjectcontext) (NSManagedObjectContext *context)
     if (self) {
         _coreDataKeyAttribute = @"firebaseKey";
         _coreDataDataAttribute = @"firebaseData";
-        
         _observedCoreDataEntities = [[NSMutableDictionary alloc] init];
-        _writeManagedObjectContextCompletionBlock = ^(NSManagedObjectContext *context) {
-            NSError *error = nil;
-            if ([context hasChanges] && ![context save:&error]) {
-                NSLog(@"Error saving: %@", error);
-            }
-        };
     }
     return self;
 }
@@ -193,7 +186,7 @@ typedef void (^fcdm_void_managedobjectcontext) (NSManagedObjectContext *context)
     
     [managedObject firedata_setPropertiesForKeysWithDictionary:properties coreDataKeyAttribute:self.coreDataKeyAttribute coreDataDataAttribute:self.coreDataDataAttribute];
     
-    if ([self.writeManagedObjectContext hasChanges]) {
+    if ([self.writeManagedObjectContext hasChanges] && self.writeManagedObjectContextCompletionBlock) {
         self.writeManagedObjectContextCompletionBlock(self.writeManagedObjectContext);
     }
 }
@@ -218,7 +211,9 @@ typedef void (^fcdm_void_managedobjectcontext) (NSManagedObjectContext *context)
             [self.writeManagedObjectContext deleteObject:managedObject];
         }
         
-        self.writeManagedObjectContextCompletionBlock(self.writeManagedObjectContext);
+        if (self.writeManagedObjectContextCompletionBlock) {
+            self.writeManagedObjectContextCompletionBlock(self.writeManagedObjectContext);
+        }
     };
     [firebase observeSingleEventOfType:FEventTypeValue withBlock:identifierBlock];
 }
@@ -247,7 +242,10 @@ typedef void (^fcdm_void_managedobjectcontext) (NSManagedObjectContext *context)
         NSManagedObject *managedObject = [self fetchCoreDataManagedObjectWithEntityName:coreDataEntity firebaseKey:snapshot.name];
         if (managedObject) {
             [self.writeManagedObjectContext deleteObject:managedObject];
-            self.writeManagedObjectContextCompletionBlock(self.writeManagedObjectContext);
+            
+            if (self.writeManagedObjectContextCompletionBlock) {
+                self.writeManagedObjectContextCompletionBlock(self.writeManagedObjectContext);
+            }
         }
     };
     [firebase observeEventType:FEventTypeChildRemoved withBlock:removedBlock];
