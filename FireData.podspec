@@ -15,9 +15,14 @@ Pod::Spec.new do |s|
   s.author       = { "Jonathan Younger" => "jonathan@daikini.com" }
   s.source       = { :git => "https://github.com/overcommitted/FireData.git", :tag => "1.0.0" }
   s.platform     = :ios, '6.0'
-  s.source_files = 'FireData', 'Vendor/iso-8601-date-formatter/ISO8601DateFormatter.{h,m}'
+  s.source_files = 'FireData'
   s.public_header_files = 'FireData/FireData.h'
   s.frameworks = 'CoreData', 'Firebase'
   s.requires_arc = true
   s.dependency 'Firebase', '~> 1.0'
+  
+  s.subspec 'no-arc' do |sp|
+      sp.source_files = 'Vendor/iso-8601-date-formatter/ISO8601DateFormatter.{h,m}'
+      sp.requires_arc = false
+    end
 end
