@@ -1,6 +1,6 @@
 FireData
 ========
-FireData seamlessly integrated Core Data with [Firebase](http://www.firebase.com).
+FireData seamlessly integrates Core Data with [Firebase](http://www.firebase.com).
 
 
 Usage
