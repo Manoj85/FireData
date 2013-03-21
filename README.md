@@ -58,6 +58,12 @@ Hold on to FireData
     self.firedata = firedata;
 
 
+Example Application
+-------------------
+
+* [CoreDataBooks](https://github.com/daikini/FireBooks) sample application that has been updated to support Firebase using FireData. 
+
+    
 Known Issues
 ------------
 
