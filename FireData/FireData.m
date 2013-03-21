@@ -36,7 +36,7 @@ typedef void (^fcdm_void_managedobjectcontext) (NSManagedObjectContext *context)
 @implementation FireData
 - (void)dealloc
 {
-    [[NSNotificationCenter defaultCenter] removeObserver:self];
+    [self removeAllObservers];
 }
 
 + (NSString *)firebaseKey
