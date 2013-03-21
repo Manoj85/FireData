@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name         = "FireData"
-  s.version      = "1.0.0"
+  s.version      = "0.9.0"
   s.summary      = "Seamlessly integrate Firebase with Core Data."
   s.homepage     = "http://github.com/overcommitted/FireData"
   s.license      = 'MIT '
