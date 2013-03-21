@@ -98,9 +98,9 @@ typedef void (^fcdm_void_managedobjectcontext) (NSManagedObjectContext *context)
         NSFetchRequest *fetchRequest = [NSFetchRequest fetchRequestWithEntityName:coreDataEntity];
         [fetchRequest setFetchBatchSize:25];
         NSArray *managedObjects = [self.observedManagedObjectContext executeFetchRequest:fetchRequest error:nil];
-        [managedObjects enumerateObjectsUsingBlock:^(NSManagedObject *managedObject, NSUInteger idx, BOOL *stop) {
+        for (NSManagedObject *managedObject in managedObjects) {
             [self updateFirebase:firebase withManagedObject:managedObject];
-        }];
+        };
     }];
 }
 
@@ -125,48 +125,42 @@ typedef void (^fcdm_void_managedobjectcontext) (NSManagedObjectContext *context)
     NSMutableSet *managedObjects = [[NSMutableSet alloc] init];
     [managedObjects unionSet:[[notification userInfo] objectForKey:NSInsertedObjectsKey]];
     [managedObjects unionSet:[[notification userInfo] objectForKey:NSUpdatedObjectsKey]];
-    
-    __weak FireData *weakSelf = self;
-    [managedObjects enumerateObjectsUsingBlock:^(NSManagedObject *managedObject, BOOL *stop) {
-        FireData *strongSelf = weakSelf; if (!strongSelf) return;
-        if (![strongSelf isObservedCoreDataEntity:[[managedObject entity] name]]) return;
+
+    for (NSManagedObject *managedObject in managedObjects) {
+        if (![self isObservedCoreDataEntity:[[managedObject entity] name]]) return;
         
-        if (![managedObject primitiveValueForKey:strongSelf.coreDataKeyAttribute]) {
-            [managedObject setPrimitiveValue:[[self class] firebaseKey] forKey:strongSelf.coreDataKeyAttribute];
+        if (![managedObject primitiveValueForKey:self.coreDataKeyAttribute]) {
+            [managedObject setPrimitiveValue:[[self class] firebaseKey] forKey:self.coreDataKeyAttribute];
         }
         
-        if (![[managedObject changedValues] objectForKey:strongSelf.coreDataDataAttribute]) {
-            [managedObject setPrimitiveValue:nil forKey:strongSelf.coreDataDataAttribute];
+        if (![[managedObject changedValues] objectForKey:self.coreDataDataAttribute]) {
+            [managedObject setPrimitiveValue:nil forKey:self.coreDataDataAttribute];
         }
-    }];
+    };
 }
 
 - (void)managedObjectContextDidSave:(NSNotification *)notification
 {
-    __weak FireData *weakSelf = self;
-    
     NSSet *deletedObjects = [[notification userInfo] objectForKey:NSDeletedObjectsKey];
-    [deletedObjects enumerateObjectsUsingBlock:^(NSManagedObject *managedObject, BOOL *stop) {
-        FireData *strongSelf = weakSelf; if (!strongSelf) return;
-        Firebase *firebase = [strongSelf firebaseForCoreDataEntity:[[managedObject entity] name]];
+    for (NSManagedObject *managedObject in deletedObjects) {
+        Firebase *firebase = [self firebaseForCoreDataEntity:[[managedObject entity] name]];
         if (firebase) {
             Firebase *child = [firebase childByAppendingPath:[managedObject valueForKey:self.coreDataKeyAttribute]];
             [child removeValue];
         }
-    }];
+    };
     
     NSMutableSet *managedObjects = [[NSMutableSet alloc] init];
     [managedObjects unionSet:[[notification userInfo] objectForKey:NSInsertedObjectsKey]];
     [managedObjects unionSet:[[notification userInfo] objectForKey:NSUpdatedObjectsKey]];
     
     NSSet *changedObjects = [managedObjects filteredSetUsingPredicate:[NSPredicate predicateWithFormat:@"%K == nil", self.coreDataDataAttribute]];
-    [changedObjects enumerateObjectsUsingBlock:^(NSManagedObject *managedObject, BOOL *stop) {
-        FireData *strongSelf = weakSelf; if (!strongSelf) return;
-        Firebase *firebase = [strongSelf firebaseForCoreDataEntity:[[managedObject entity] name]];
+    for (NSManagedObject *managedObject in changedObjects) {
+        Firebase *firebase = [self firebaseForCoreDataEntity:[[managedObject entity] name]];
         if (firebase) {
-            [strongSelf updateFirebase:firebase withManagedObject:managedObject];
+            [self updateFirebase:firebase withManagedObject:managedObject];
         }
-    }];
+    };
 }
 
 - (NSString *)coreDataEntityForFirebase:(Firebase *)firebase
