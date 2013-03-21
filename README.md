@@ -61,7 +61,7 @@ Hold on to FireData
 Known Issues
 ------------
 
-* [Firebase](http://www.firebase.com) does not currently persistent offline changes to disk. Full offline support backed by disk will be coming in the future.[1](https://groups.google.com/d/msg/firebase-talk/lVFOh9Wqwog/FvqWiiuP-_MJ)
+* [Firebase](http://www.firebase.com) does not currently persistent offline changes to disk. Full offline support backed by disk will be coming in the future.[[1]](https://groups.google.com/d/msg/firebase-talk/lVFOh9Wqwog/FvqWiiuP-_MJ)
 
 
 License
