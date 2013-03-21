@@ -14,7 +14,7 @@ typedef void (^fcdm_void_managedobjectcontext) (NSManagedObjectContext *context)
 @interface FireData ()
 @property (strong, nonatomic) NSManagedObjectContext *observedManagedObjectContext;
 @property (strong, nonatomic) NSManagedObjectContext *writeManagedObjectContext;
-@property (strong, nonatomic) NSMutableDictionary *observedCoreDataEntities;
+@property (strong, nonatomic) NSMutableDictionary *linkedEntities;
 @property (copy, nonatomic) fcdm_void_managedobjectcontext writeManagedObjectContextCompletionBlock;
 @end
 
@@ -22,7 +22,7 @@ typedef void (^fcdm_void_managedobjectcontext) (NSManagedObjectContext *context)
 - (void)managedObjectContextObjectsDidChange:(NSNotification *)notification;
 - (void)managedObjectContextDidSave:(NSNotification *)notification;
 - (NSString *)coreDataEntityForFirebase:(Firebase *)firebase;
-- (BOOL)isObservedCoreDataEntity:(NSString *)entity;
+- (BOOL)isCoreDataEntityLinked:(NSString *)entity;
 - (NSManagedObject *)fetchCoreDataManagedObjectWithEntityName:(NSString *)entityName firebaseKey:(NSString *)firebaseKey;
 - (void)deleteCoreDataManagedObjectsThatNoLongerExistInFirebase:(Firebase *)firebase;
 @end
@@ -36,7 +36,7 @@ typedef void (^fcdm_void_managedobjectcontext) (NSManagedObjectContext *context)
 @implementation FireData
 - (void)dealloc
 {
-    [self removeAllObservers];
+    [self stopObserving];
 }
 
 + (NSString *)firebaseKey
@@ -50,7 +50,7 @@ typedef void (^fcdm_void_managedobjectcontext) (NSManagedObjectContext *context)
     if (self) {
         _coreDataKeyAttribute = @"firebaseKey";
         _coreDataDataAttribute = @"firebaseData";
-        _observedCoreDataEntities = [[NSMutableDictionary alloc] init];
+        _linkedEntities = [[NSMutableDictionary alloc] init];
     }
     return self;
 }
@@ -78,21 +78,41 @@ typedef void (^fcdm_void_managedobjectcontext) (NSManagedObjectContext *context)
     self.writeManagedObjectContextCompletionBlock = [block copy];
 }
 
-- (void)observeCoreDataEntity:(NSString *)coreDataEntity firebase:(Firebase *)firebase
+- (void)linkCoreDataEntity:(NSString *)coreDataEntity withFirebase:(Firebase *)firebase
 {
-    [self.observedCoreDataEntities setObject:firebase forKey:coreDataEntity];
+    [self.linkedEntities setObject:firebase forKey:coreDataEntity];
 }
 
-- (void)removeAllObservers
+- (void)unlinkCoreDataEntity:(NSString *)coreDataEntity
+{
+    [[self.linkedEntities objectForKey:coreDataEntity] removeAllObservers];
+    [self.linkedEntities removeObjectForKey:coreDataEntity];
+}
+
+- (void)startObserving
+{
+    [self.linkedEntities enumerateKeysAndObjectsUsingBlock:^(NSString *coreDataEntity, Firebase *firebase, BOOL *stop) {
+        [self deleteCoreDataManagedObjectsThatNoLongerExistInFirebase:firebase];
+        [self observeFirebase:firebase];
+    }];
+    
+    if (self.observedManagedObjectContext) {
+        NSNotificationCenter *notificationCenter = [NSNotificationCenter defaultCenter];
+        [notificationCenter addObserver:self selector:@selector(managedObjectContextObjectsDidChange:) name:NSManagedObjectContextObjectsDidChangeNotification object:self.observedManagedObjectContext];
+        [notificationCenter addObserver:self selector:@selector(managedObjectContextDidSave:) name:NSManagedObjectContextDidSaveNotification object:self.observedManagedObjectContext];
+    }
+}
+
+- (void)stopObserving
 {
     [[NSNotificationCenter defaultCenter] removeObserver:self];
-    NSArray *firebases = [self.observedCoreDataEntities allValues];
+    NSArray *firebases = [self.linkedEntities allValues];
     [firebases makeObjectsPerformSelector:@selector(removeAllObservers)];
 }
 
 - (void)replaceFirebaseFromCoreData
 {
-    [self.observedCoreDataEntities enumerateKeysAndObjectsUsingBlock:^(NSString *coreDataEntity, Firebase *firebase, BOOL *stop) {
+    [self.linkedEntities enumerateKeysAndObjectsUsingBlock:^(NSString *coreDataEntity, Firebase *firebase, BOOL *stop) {
         [firebase removeValue];
         
         NSFetchRequest *fetchRequest = [NSFetchRequest fetchRequestWithEntityName:coreDataEntity];
@@ -104,19 +124,7 @@ typedef void (^fcdm_void_managedobjectcontext) (NSManagedObjectContext *context)
     }];
 }
 
-- (void)startSync
-{
-    [self.observedCoreDataEntities enumerateKeysAndObjectsUsingBlock:^(NSString *coreDataEntity, Firebase *firebase, BOOL *stop) {
-        [self deleteCoreDataManagedObjectsThatNoLongerExistInFirebase:firebase];
-        [self observeFirebase:firebase];
-    }];
-    
-    if (self.observedManagedObjectContext) {
-        NSNotificationCenter *notificationCenter = [NSNotificationCenter defaultCenter];
-        [notificationCenter addObserver:self selector:@selector(managedObjectContextObjectsDidChange:) name:NSManagedObjectContextObjectsDidChangeNotification object:self.observedManagedObjectContext];
-        [notificationCenter addObserver:self selector:@selector(managedObjectContextDidSave:) name:NSManagedObjectContextDidSaveNotification object:self.observedManagedObjectContext];
-    }
-}
+
 @end
 
 @implementation FireData (CoreData)
@@ -127,7 +135,7 @@ typedef void (^fcdm_void_managedobjectcontext) (NSManagedObjectContext *context)
     [managedObjects unionSet:[[notification userInfo] objectForKey:NSUpdatedObjectsKey]];
 
     for (NSManagedObject *managedObject in managedObjects) {
-        if (![self isObservedCoreDataEntity:[[managedObject entity] name]]) return;
+        if (![self isCoreDataEntityLinked:[[managedObject entity] name]]) return;
         
         if (![managedObject primitiveValueForKey:self.coreDataKeyAttribute]) {
             [managedObject setPrimitiveValue:[[self class] firebaseKey] forKey:self.coreDataKeyAttribute];
@@ -165,10 +173,10 @@ typedef void (^fcdm_void_managedobjectcontext) (NSManagedObjectContext *context)
 
 - (NSString *)coreDataEntityForFirebase:(Firebase *)firebase
 {
-    return [[self.observedCoreDataEntities allKeysForObject:firebase] lastObject];
+    return [[self.linkedEntities allKeysForObject:firebase] lastObject];
 }
 
-- (BOOL)isObservedCoreDataEntity:(NSString *)entity
+- (BOOL)isCoreDataEntityLinked:(NSString *)entity
 {
     return [self firebaseForCoreDataEntity:entity] != nil;
 }
@@ -229,7 +237,7 @@ typedef void (^fcdm_void_managedobjectcontext) (NSManagedObjectContext *context)
 @implementation FireData (Firebase)
 - (Firebase *)firebaseForCoreDataEntity:(NSString *)entity
 {
-    return [self.observedCoreDataEntities objectForKey:entity];
+    return [self.linkedEntities objectForKey:entity];
 }
 
 - (void)observeFirebase:(Firebase *)firebase

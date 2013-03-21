@@ -37,9 +37,9 @@ Get a reference to Firebase
 
     Firebase *firebase = [[Firebase alloc] initWithUrl:@"https://EXAMPLE.firebaseio.com/"];
     
-Observe the Core Data and Firebase references that are to be synced
+Link the Core Data and Firebase references that are to be synced
 
-    [firedata observeCoreDataEntity:@"Book" firebase:[firebase childByAppendingPath:@"books"]];
+    [firedata linkCoreDataEntity:@"Book" withFirebase:[firebase childByAppendingPath:@"books"]];
     
 Check the existing data in Firebase
 
@@ -49,8 +49,8 @@ Check the existing data in Firebase
             [firedata replaceFirebaseFromCoreData];
         }
     
-        // Start the synchronization
-        [firedata startSync];
+        // Start observing changes between Core Data and Firebase
+        [firedata startObserving];
     }];
     
 Hold on to FireData
@@ -61,9 +61,12 @@ Hold on to FireData
 Known Issues
 ------------
 
-* [Firebase](http://www.firebase.com) does not currently persistent offline changes to disk. Full offline support backed by disk will be coming in the future.
+* [Firebase](http://www.firebase.com) does not currently persistent offline changes to disk. Full offline support backed by disk will be coming in the future.[1](https://groups.google.com/d/msg/firebase-talk/lVFOh9Wqwog/FvqWiiuP-_MJ)
 
 
 License
 -------
 [MIT](https://github.com/overcommitted/FireData/blob/master/LICENSE).
+
+
+[1] https://groups.google.com/d/msg/firebase-talk/lVFOh9Wqwog/FvqWiiuP-_MJ

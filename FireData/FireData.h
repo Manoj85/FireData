@@ -66,25 +66,33 @@
 - (void)setWriteManagedObjectContext:(NSManagedObjectContext *)writeManagedObjectContext withCompletionBlock:(void (^)(NSManagedObjectContext *error))block;
 
 /**
- * observeCoreDataEntity:firebase: is used to listen for data changes for the specified Core Data entity and Firebase reference.
+ * linkCoreDataEntity:withFirebase: is used to specify which Core Data entity to synchronize changes with the specified Firebase.
  *
  * @param coreDataEntity The Core Data entity name to listen for changes to.
  * @param firebase The Firebase reference to listen for changes to.
  */
-- (void)observeCoreDataEntity:(NSString *)coreDataEntity firebase:(Firebase *)firebase;
+- (void)linkCoreDataEntity:(NSString *)coreDataEntity withFirebase:(Firebase *)firebase;
 
 /**
- * Detach all previously attached observers.
+ * unlinkCoreDataEntity: is used to remove the link between the Core Data entity and the associated Firebase.
+ *
+ * @param coreDataEntity The Core Data entity name to unlink.
  */
-- (void)removeAllObservers;
+- (void)unlinkCoreDataEntity:(NSString *)coreDataEntity;
+
+/**
+ * Starts observing changes between Core Data and Firebase.
+ */
+- (void)startObserving;
+
+/**
+ * Stops observing changes between Core Data and Firebase.
+ */
+- (void)stopObserving;
 
 /**
  * Replace all Firebase data with values from Core Data.
  */
 - (void)replaceFirebaseFromCoreData;
 
-/**
- * Starts the synchronization of the Core Data managed objects with Firebase
- */
-- (void)startSync;
 @end
