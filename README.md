@@ -24,7 +24,11 @@ Create a new managed object context to write changes from Firebase; set its pare
     [writingContext setParentContext:self.managedObjectContext];
     [firedata setWriteManagedObjectContext:writingContext withCompletionBlock:^(NSManagedObjectContext *context) {
         NSError *error = nil;
-        if ([context hasChanges] && ![context save:&error]) {
+        if ([context save:&error]) {
+            if (![self.managedObjectContext save:&error]) {
+                NSLog(@"Error saving: %@", error);
+            }
+        } else {
             NSLog(@"Error saving: %@", error);
         }
     }];
@@ -37,10 +41,29 @@ Observe the Core Data and Firebase references that are to be synced
 
     [firedata observeCoreDataEntity:@"Book" firebase:[firebase childByAppendingPath:@"books"]];
     
+Check the existing data in Firebase
+
+    [firebase observeSingleEventOfType:FEventTypeValue withBlock:^(FDataSnapshot *snapshot) {
+        // If Firebase is empty then replace with the data from Core Data
+        if (snapshot.value == [NSNull null]) {
+            [firedata replaceFirebaseFromCoreData];
+        }
+    
+        // Start the synchronization
+        [firedata startSync];
+    }];
+    
 Hold on to FireData
     
     self.firedata = firedata;
 
+
+Known Issues
+------------
+
+* [Firebase](http://www.firebase.com) does not currently persistent offline changes to disk. Full offline support backed by disk will be coming in the future.
+
+
 License
 -------
-[MIT](http://firebase.mit-license.org).
+[MIT](https://github.com/overcommitted/FireData/blob/master/LICENSE).

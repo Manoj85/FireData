@@ -5,7 +5,7 @@ Pod::Spec.new do |s|
   s.homepage     = "http://github.com/overcommitted/FireData"
   s.license      = 'MIT '
   s.author       = { "Jonathan Younger" => "jonathan@daikini.com" }
-  s.source       = { :git => "https://github.com/overcommitted/FireData.git", :tag => "1.0.0" }
+  s.source       = { :git => "https://github.com/overcommitted/FireData.git", :tag => "0.9.0" }
   s.platform     = :ios, '6.0'
   s.source_files = 'FireData'
   s.public_header_files = 'FireData/FireData.h'

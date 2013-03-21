@@ -46,6 +46,11 @@
 @property (copy, nonatomic) NSString *coreDataDataAttribute;
 
 /**
+ * @return A new unique key
+ */
++ (NSString *)firebaseKey;
+
+/**
  * observeManagedObjectContext: is used to listen for data changes for the specified managed object context.
  *
  * @param managedObjectContext The managed object context to listen for changes on.
@@ -77,4 +82,9 @@
  * Replace all Firebase data with values from Core Data.
  */
 - (void)replaceFirebaseFromCoreData;
+
+/**
+ * Starts the synchronization of the Core Data managed objects with Firebase
+ */
+- (void)startSync;
 @end

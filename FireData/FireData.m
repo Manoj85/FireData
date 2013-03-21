@@ -39,6 +39,11 @@ typedef void (^fcdm_void_managedobjectcontext) (NSManagedObjectContext *context)
     [[NSNotificationCenter defaultCenter] removeObserver:self];
 }
 
++ (NSString *)firebaseKey
+{
+    return [[NSUUID UUID] UUIDString];
+}
+
 - (id)init
 {
     self = [super init];
@@ -53,11 +58,7 @@ typedef void (^fcdm_void_managedobjectcontext) (NSManagedObjectContext *context)
 - (void)observeManagedObjectContext:(NSManagedObjectContext *)managedObjectContext
 {
     [self removeObserverForManagedObjectContext];
-    
     self.observedManagedObjectContext = managedObjectContext;
-    NSNotificationCenter *notificationCenter = [NSNotificationCenter defaultCenter];
-    [notificationCenter addObserver:self selector:@selector(managedObjectContextObjectsDidChange:) name:NSManagedObjectContextObjectsDidChangeNotification object:self.observedManagedObjectContext];
-    [notificationCenter addObserver:self selector:@selector(managedObjectContextDidSave:) name:NSManagedObjectContextDidSaveNotification object:self.observedManagedObjectContext];
 }
 
 - (void)removeObserverForManagedObjectContext
@@ -80,8 +81,6 @@ typedef void (^fcdm_void_managedobjectcontext) (NSManagedObjectContext *context)
 - (void)observeCoreDataEntity:(NSString *)coreDataEntity firebase:(Firebase *)firebase
 {
     [self.observedCoreDataEntities setObject:firebase forKey:coreDataEntity];
-    [self observeFirebase:firebase];
-    [self deleteCoreDataManagedObjectsThatNoLongerExistInFirebase:firebase];
 }
 
 - (void)removeAllObservers
@@ -104,6 +103,20 @@ typedef void (^fcdm_void_managedobjectcontext) (NSManagedObjectContext *context)
         }];
     }];
 }
+
+- (void)startSync
+{
+    [self.observedCoreDataEntities enumerateKeysAndObjectsUsingBlock:^(NSString *coreDataEntity, Firebase *firebase, BOOL *stop) {
+        [self deleteCoreDataManagedObjectsThatNoLongerExistInFirebase:firebase];
+        [self observeFirebase:firebase];
+    }];
+    
+    if (self.observedManagedObjectContext) {
+        NSNotificationCenter *notificationCenter = [NSNotificationCenter defaultCenter];
+        [notificationCenter addObserver:self selector:@selector(managedObjectContextObjectsDidChange:) name:NSManagedObjectContextObjectsDidChangeNotification object:self.observedManagedObjectContext];
+        [notificationCenter addObserver:self selector:@selector(managedObjectContextDidSave:) name:NSManagedObjectContextDidSaveNotification object:self.observedManagedObjectContext];
+    }
+}
 @end
 
 @implementation FireData (CoreData)
@@ -119,7 +132,7 @@ typedef void (^fcdm_void_managedobjectcontext) (NSManagedObjectContext *context)
         if (![strongSelf isObservedCoreDataEntity:[[managedObject entity] name]]) return;
         
         if (![managedObject primitiveValueForKey:strongSelf.coreDataKeyAttribute]) {
-            [managedObject setPrimitiveValue:[[NSUUID UUID] UUIDString] forKey:strongSelf.coreDataKeyAttribute];
+            [managedObject setPrimitiveValue:[[self class] firebaseKey] forKey:strongSelf.coreDataKeyAttribute];
         }
         
         if (![[managedObject changedValues] objectForKey:strongSelf.coreDataDataAttribute]) {
